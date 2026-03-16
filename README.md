@@ -1,6 +1,8 @@
 # School Management System
 
 A full-stack application for managing school operations, built with .NET Core and Blazor / React.
+This has been created for the purpose of practicing test automation.
+With this you are able to practice ui, api, and sql interactions.
 
 ## Components
 
