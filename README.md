@@ -4,6 +4,11 @@ A full-stack application for managing school operations, built with .NET Core an
 This has been created for the purpose of practicing test automation.
 With this you are able to practice ui, api, and sql interactions.
 
+This is not meant to be used for actual school management.
+
+The usage assumption is that it will be hosted via docker and interacted with locally.
+Sharing access to the site will require some changes to the docker compose.
+
 ## Components
 
 - **Frontend**: Blazor Web UI or React - React is loaded into the dockerfile

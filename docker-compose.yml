@@ -22,7 +22,7 @@ services:
       context: ./react_ui
       dockerfile: Dockerfile
     environment:
-      - REACT_APP_API_URL=http://10.129.33.200:5002
+      - REACT_APP_API_URL=http://localhost:5002
     ports:
       - "5001:3000"
     depends_on:
