@@ -1,0 +1,10 @@
+.dashboard-header {
+    position: fixed;
+    left: 250px;
+    top: 0;
+    right: 0;
+    background-color: #f4f4f4;
+    padding: 10px 20px;
+    border-bottom: 1px solid #ddd;
+    z-index: 1000;
+  }

@@ -1,0 +1,53 @@
+# School Management System
+
+A full-stack application for managing school operations, built with .NET Core and Blazor / React.
+
+## Components
+
+- **Frontend**: Blazor Web UI or React - React is loaded into the dockerfile
+- **Backend**: .NET Core API
+- **Database**: SQL Server
+
+## Prerequisites
+
+- Docker Desktop
+- Docker Compose
+
+## Getting Started
+
+1. Build and run the application using Docker Compose:
+```bash
+docker-compose up --build
+```
+
+2. Access the application:
+- Frontend UI: http://localhost:5001
+- API Swagger: http://localhost:5000/swagger
+- Database: localhost:1433
+
+## Architecture
+
+The application consists of three Docker containers:
+- `ui`: React / Blazor frontend running on port 5001
+- `api`: .NET Core API running on port 5000
+- `db`: SQL Server database running on port 1433
+
+## Environment Variables
+
+The following environment variables are configured in docker-compose.yml:
+- API: `ASPNETCORE_ENVIRONMENT=Docker`
+- Database: 
+  - `ACCEPT_EULA=Y`
+  - `SA_PASSWORD=YourStrong!Passw0rd`
+
+## Stopping the Application
+
+To stop the application and remove containers:
+```bash
+docker-compose down
+```
+
+To stop the application and remove containers, images, and volumes:
+```bash
+docker-compose down --rmi all -v
+``` 

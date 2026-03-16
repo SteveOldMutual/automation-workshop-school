@@ -1,0 +1,53 @@
+﻿@page "/usermanagement"
+@using Automation_School_UI.Attributes
+@using Automation_School_UI.Components
+@using Automation_School_UI.Models
+@using Automation_School_UI.Services
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Authorization
+@inject NavigationManager Navigation
+@inject IUserManagementService UserManagementService
+@inject ILocalStorageService LocalStorageService
+@attribute [RequireAuthentication]
+@inherits AuthenticatedComponentBase
+
+
+<h3>User Management</h3>
+
+@if (data == null || data.Count < 1)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Name</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in data)
+            {
+                <tr>
+                    <td>@item.Id</td>
+                    <td>@item.Username</td>
+                    <td>@item.Email</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+
+@code{
+    private List<User> data = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        data = await UserManagementService.GetUsers();
+    }
+}

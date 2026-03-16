@@ -1,0 +1,166 @@
+﻿@page "/dismissals"
+@using Automation_School_UI.Attributes
+@using Automation_School_UI.Components
+@using Automation_School_UI.Components.Modals
+@using Automation_School_UI.Models
+@using Automation_School_UI.Services
+@using BlazorBootstrap
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Authorization
+@using System.IdentityModel.Tokens.Jwt
+@inject NavigationManager Navigation
+@inject IStudentService StudentService
+@inject IRollcallService RollcallService
+@inject Blazored.Toast.Services.IToastService ToastService
+@inject ILocalStorageService LocalStorageService
+
+<h3>Dismissals Dashboard</h3>
+<Toasts class="p-3" Messages="messages" Placement="ToastsPlacement.TopRight" />
+
+<input type="text" @bind="searchTerm" @oninput="HandleSearchInput" placeholder="Search students..." class="form-control mb-3" />
+
+@if (pagedData == null || pagedData.Count < 1)
+{
+    <p><em>No Students with currently Present status</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Firstname</th>
+                <th>Lastname</th>
+                <th>Age</th>
+                <th>Grade</th>
+                <th>Dismissed</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in pagedData)
+            {
+                <tr>
+                    <td>@item.Id</td>
+                    <td>@item.FirstName</td>
+                    <td>@item.LastName</td>
+                    <td>@item.Age</td>
+                    <td>@item.Grade</td>
+                    <td>@IsDismissed(item.Id)</td>
+                    <td>
+                        @if (@IsDismissed(item.Id))
+                        {
+                            <BlazorBootstrap.Button Color="ButtonColor.Info" @onclick="() => HandleUndoDismissStudent(item.Id)">Undo Dismissal</BlazorBootstrap.Button>
+                        }
+                        else 
+                        {
+                            <BlazorBootstrap.Button Color="ButtonColor.Danger" @onclick="() => HandleDismissStudent(item.Id)">Dismiss</BlazorBootstrap.Button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <BlazorBootstrap.Pagination TotalPages="@pages" DisplayPages="@pageSize" ActivePageNumber="@currentPage" PageChanged="OnPageChangedAsync" />
+}
+
+@code {
+    private List<Student> data;
+    private List<Student> pagedData = new();
+    private RollcallMetadata metadata;
+    private CreateStudentModal createStudentModal;
+    private List<ToastMessage> messages = new List<ToastMessage>();
+   private string searchTerm = string.Empty;
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalItems = 0;
+    private int pages = 1;
+
+    private async Task ReloadStudents()
+    {
+        data = await StudentService.GetStudents();
+        metadata = await RollcallService.GetRollCallData(DateTime.Now);
+        var presentStudentIds = metadata.Rollcalls.Where(x => x.IsPresent).Select(x => x.studentId).ToList();
+        data = data.Where(x => presentStudentIds.Contains(x.Id)).ToList();
+        ApplySearchAndPagination();
+    }
+
+    private bool IsDismissed(string id)
+    {
+        var student = metadata.Rollcalls.FirstOrDefault(x => x.studentId == id);
+        return student?.Dismissed ?? false;
+    }
+
+    private async Task HandleDismissStudent(string id)
+    {
+        ROLLCALLOUTCOME outcome = await RollcallService.DismissStudent(id);
+
+        if (outcome != ROLLCALLOUTCOME.SUCCESS)
+        {
+            ToastMessage toast = new()
+            {
+                Type = ToastType.Danger,
+                Title = "Roll call failure",
+                HelpText = "Unable to dismiss student",
+                Message = $"Unable to dismiss student - {outcome}"
+            };
+            messages.Add(toast);
+        }
+
+        await ReloadStudents();
+    }
+
+    private async Task HandleUndoDismissStudent(string id)
+    {
+        ROLLCALLOUTCOME outcome = await RollcallService.UndoDismiss(id);
+
+        if (outcome != ROLLCALLOUTCOME.SUCCESS)
+        {
+            ToastMessage toast = new()
+            {
+                Type = ToastType.Danger,
+                Title = "Roll call failure",
+                HelpText = "Unable to undo dismissal",
+                Message = $"Unable to undo dismissal - {outcome}"
+            };
+            messages.Add(toast);
+        }
+
+        await ReloadStudents();
+    }
+
+    private void ApplySearchAndPagination()
+    {
+        var filteredData = string.IsNullOrWhiteSpace(searchTerm)
+            ? data
+            : data.Where(s => s.FirstName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                              s.LastName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                              s.Id.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+                              ).ToList();
+
+        totalItems = filteredData.Count;
+        pagedData = filteredData.Skip((currentPage - 1) * pageSize).Take(pageSize).ToList();
+        pages = (int)Math.Ceiling((double)totalItems / pageSize);
+         Console.WriteLine($"Total: {totalItems}");
+          Console.WriteLine($"Page Size: {pageSize}");
+        Console.WriteLine($"Pages: {pages}");
+    }
+
+    private async Task OnPageChangedAsync(int page)
+    {
+        await Task.Run(() => {currentPage = page;});
+        ApplySearchAndPagination();
+    }
+
+    private void HandleSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value.ToString();
+        currentPage = 1; // Reset to first page on new search
+        ApplySearchAndPagination();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadStudents();
+    }
+}

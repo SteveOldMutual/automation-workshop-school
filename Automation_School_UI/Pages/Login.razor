@@ -1,0 +1,120 @@
+﻿@page "/login"
+@using Automation_School_UI.Components.Modals
+@using Automation_School_UI.Providers
+@using Automation_School_UI.Services
+@using Blazored.LocalStorage
+@using Automation_School_UI.Components
+@using Automation_School_UI.Models
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject ILocalStorageService LocalStorage
+@inject Blazored.Toast.Services.IToastService ToastService
+@using BlazorBootstrap;
+@using System.ComponentModel.DataAnnotations
+@inject IAuthService AuthService
+
+
+<div class="container mt-5">
+    <Toasts class="p-3" Messages="messages" Placement="ToastsPlacement.TopRight" />
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <Card>
+                <CardHeader>
+                    <h4 class="card-title">Login</h4>
+                </CardHeader>
+                <CardBody>
+                    <EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <InputText id="username" class="form-control" @bind-Value="loginModel.Username" />
+                            <ValidationMessage For="@(() => loginModel.Username)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <InputText id="password" type="password" class="form-control" @bind-Value="loginModel.Password" />
+                            <ValidationMessage For="@(() => loginModel.Password)" />
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">Login</button>
+                    </EditForm>
+                </CardBody>
+            </Card>
+            <BlazorBootstrap.Button Color="BlazorBootstrap.ButtonColor.Primary" @onclick="async () => await HandleRegisterClick()">Register</BlazorBootstrap.Button>
+            <RegisterUserModal @ref="registerUserModal" OnRegisterCompleted="HandleRegisterCompleted" ></RegisterUserModal>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginDTO loginModel = new LoginDTO();
+    List<ToastMessage> messages = new List<ToastMessage>();
+    private RegisterUserModal registerUserModal;
+    private void HandleRegisterCompleted(string result)
+        {
+            if (result == null)
+            {
+                Console.WriteLine("register success");
+                ToastMessage toast = new()
+                {
+                    Type = ToastType.Success,
+                    Title = "Registration Successful",
+                    HelpText = "Registration Successful",
+                    Message = "You have successfully registered."
+                };
+                messages.Add(toast);
+            }
+            else
+            {
+                ToastMessage toast = new()
+                {
+                    Type = ToastType.Danger,
+                    Title = "Registration Failed",
+                    HelpText = "Registration Failed",
+                    Message = result
+                };
+                messages.Add(toast);
+            }
+            StateHasChanged();
+        }
+    protected override async Task OnInitializedAsync()
+    {
+        var t = "";
+    }
+
+    private async Task HandleRegisterClick()
+    {
+        await registerUserModal.Open();
+    }
+
+    private async Task HandleLogin()
+    {
+        var token = await AuthService.Authenticate(loginModel);
+        if (token != null)
+        {
+            // Store the token
+            await LocalStorage.SetItemAsync("authToken", token);
+            
+            // Navigate to a protected page
+            Navigation.NavigateTo("/");
+            StateHasChanged();
+        }
+        else
+        {
+            ToastMessage toast = new()
+            {
+                Type = ToastType.Danger,
+                Title = "Login Failed",
+                HelpText = "Login Failed",
+                Message = "Login Failed, please try again."
+            };
+            messages.Add(toast);
+        }
+        StateHasChanged();
+    }
+
+   
+}

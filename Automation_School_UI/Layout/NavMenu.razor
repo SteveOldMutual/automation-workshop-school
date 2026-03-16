@@ -1,0 +1,89 @@
+﻿@using Blazored.LocalStorage
+@inject ILocalStorageService LocalStorageService
+@inject NavigationManager Navigation
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">Automation_School_UI</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+@if(renderMenu){
+    <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="students">
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Students
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="rollcall">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Roll Call
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="dismissals">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Dismissals
+            </NavLink>
+        </div>
+      
+    </nav>
+</div>
+}
+
+
+@code {
+    private bool collapseNavMenu = true;
+     private bool renderMenu = false;
+
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    protected override void OnInitialized()
+    {
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object sender, LocationChangedEventArgs e)
+    {
+        _ = InvokeAsync(async () => await HandleLocationChangedAsync());
+    }
+
+    private async Task HandleLocationChangedAsync()
+    {
+        renderMenu = await RenderMenu();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+      
+        renderMenu = await RenderMenu();
+        StateHasChanged();
+        
+    } 
+
+    private async Task<bool> RenderMenu(){
+        var token = await LocalStorageService.GetItemAsync<string>("authToken");      
+        return (!string.IsNullOrEmpty(token));        
+    }
+}

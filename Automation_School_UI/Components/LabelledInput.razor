@@ -1,0 +1,34 @@
+﻿<div>
+    <label for="@ID">@Label</label>
+    <InputText id="@ID" @bind-Value="Bind" type="@InputType" />
+</div>
+
+@code {
+    private string _bind;
+
+    [Parameter]
+    public string Bind
+    {
+        get => _bind;
+        set
+        {
+            if (_bind != value)
+            {
+                _bind = value;
+                ValueChanged.InvokeAsync(value);
+            }
+        }
+    }
+
+    [Parameter]
+    public string InputType { get; set; } = "text";
+
+    [Parameter]
+    public string Label { get; set; }
+
+    [Parameter]
+    public string ID { get; set; }
+
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+}

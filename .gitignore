@@ -1,0 +1,5 @@
+*/bin
+*/obj
+**/*.vsidx
+**/node_modules
+.vs/

@@ -1,0 +1,63 @@
+﻿@using Blazored.LocalStorage
+@inherits LayoutComponentBase
+@inject ILocalStorageService LocalStorageService
+@inject NavigationManager Navigation
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+
+            @if (isTokenPresent)
+            {
+                <BlazorBootstrap.Button Color="BlazorBootstrap.ButtonColor.Secondary" Outline="true" @onclick="Logout">Logout</BlazorBootstrap.Button>
+            }
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    private bool isTokenPresent;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var token = await LocalStorageService.GetItemAsync<string>("authToken");
+            isTokenPresent = !string.IsNullOrEmpty(token);
+        }
+        catch (Exception e) {
+            Console.WriteLine(e.Message);
+        }
+
+    }
+
+    protected override async Task OnParametersSetAsync() 
+    {
+        try
+        {
+            var token = await LocalStorageService.GetItemAsync<string>("authToken");
+            isTokenPresent = !string.IsNullOrEmpty(token);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
+    }
+
+    private async Task Logout()
+    {
+        await LocalStorageService.RemoveItemAsync("authToken");
+        isTokenPresent = false;
+        StateHasChanged(); 
+        Navigation.NavigateTo("/login",true);
+        // Force re-render
+    }
+}

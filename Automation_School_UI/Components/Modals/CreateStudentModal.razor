@@ -1,0 +1,100 @@
+﻿@using Automation_School_UI.Models
+@using Automation_School_UI.Services
+@using Blazored.LocalStorage
+@using System.IdentityModel.Tokens.Jwt
+@inject IStudentService StudentService
+
+@* StudentModal.razor *@
+<div class="modal @ModalClass" tabindex="-1" role="dialog" style="display:@ModalDisplay; overflow-y: auto;">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@ModalTitle</h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="Close"></button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="student" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+                    <div class="mb-3">
+                        <label for="firstName" class="form-label">First Name</label>
+                        <InputText id="firstName" class="form-control" @bind-Value="student.FirstName" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="lastName" class="form-label">Last Name</label>
+                        <InputText id="lastName" class="form-control" @bind-Value="student.LastName" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="age" class="form-label">Age</label>
+                        <InputNumber id="age" class="form-control" @bind-Value="student.Age" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="grade" class="form-label">Grade</label>
+                        <InputText id="grade" class="form-control" @bind-Value="student.Grade" />
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </EditForm>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="Close">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private StudentDTO student = new StudentDTO();
+    private string ModalTitle => StudentId == null ? "Add Student" : "Edit Student";
+
+    [Parameter] public string StudentId { get; set; } = null;
+    [Parameter] public EventCallback OnStudentAdded { get; set; }
+
+    private string ModalDisplay { get; set; } = "none";
+    private string ModalClass { get; set; } = "";
+
+    public async Task Open(string id = null)
+    {
+        StudentId = id;
+        if (StudentId != null)
+        {
+            await LoadStudentData();
+        }
+        else {
+            student = new Student();
+        }
+        ModalDisplay = "block";
+        ModalClass = "show";
+    }
+
+    public void Close()
+    {
+        ModalDisplay = "none";
+        ModalClass = "";
+        StudentId = null;
+    }
+    private async Task LoadStudentData()
+    {
+        student = await StudentService.GetStudent(StudentId);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+    }
+
+    private async Task HandleValidSubmit()
+    {
+
+        if (StudentId == null)
+        {
+            await StudentService.CreateStudent(student);
+        }
+        else 
+        {
+            await StudentService.UpdateStudent(StudentId, student);
+        }
+       
+        await OnStudentAdded.InvokeAsync();
+        Close();
+    }
+}

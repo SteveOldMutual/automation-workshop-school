@@ -1,0 +1,29 @@
+.dashboard {
+    display: flex;
+    flex-direction: column;
+    }
+   
+    .tile-set {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px; /* Adjust spacing between sets as needed */
+    }
+   
+    .tile-set > * {
+    margin-right: 10px; /* Reduce spacing between tiles */
+    }
+   
+    .tile-set > *:last-child {
+    margin-right: 0; /* Remove right margin for the last tile */
+    }
+
+.dashboard-header {
+    position: fixed;
+    left: 250px;
+    top: 0;
+    right: 0;
+    background-color: #f4f4f4;
+    padding: 10px 20px;
+    border-bottom: 1px solid #ddd;
+    z-index: 1000;
+  }

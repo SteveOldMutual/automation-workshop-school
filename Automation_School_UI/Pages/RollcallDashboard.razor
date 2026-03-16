@@ -1,0 +1,110 @@
+﻿@page "/"
+@using Automation_School_UI.Attributes
+@using Automation_School_UI.Components
+@using Automation_School_UI.Models
+@using Automation_School_UI.Services
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Authorization
+@using System.IdentityModel.Tokens.Jwt
+@using System.Text.Json
+@using Microsoft.IdentityModel.Tokens
+@using System.Text
+@using System.Security.Claims
+@inject NavigationManager Navigation
+@inject ILocalStorageService LocalStorageService
+@inject IRollcallService RollCallService
+@inject IStudentService StudentService
+@attribute [RequireAuthentication]
+@inherits AuthenticatedComponentBase
+
+<div class="dashboard">
+    <!-- First set of tiles -->
+    <div class="tile-set">
+        <DashboardTile Title="Unchecked Students" Number="@Unchecked"></DashboardTile>
+        <DashboardTile Title="Checked Students" Number="@Checked"></DashboardTile>
+       @if (Total == 0)
+        {
+            <DashboardTile Title="Checkin not started" Number="0"></DashboardTile>
+        }
+        else 
+        {
+            <DashTilePercent Title="Checkin Progress" Value="@Checked" Total="@Total"></DashTilePercent>
+        }
+
+    </div>
+
+    <!-- Second set of tiles -->
+    <div class="tile-set">
+        <DashboardTile Title="Present Students" Number="@rollcallMetadata.TotalPresent"></DashboardTile>
+        <DashboardTile Title="Absent Students" Number="@rollcallMetadata.TotalAbsent"></DashboardTile>
+        @if (rollcallMetadata.TotalDismissed == 0)
+        {
+            <DashboardTile Title="Dismissals not started" Number="0"></DashboardTile>
+        }
+        else
+        {
+            <DashTilePercent Title="Dismissal Progress" Value="@rollcallMetadata.TotalDismissed" Total="@rollcallMetadata.TotalPresent"></DashTilePercent>
+        }
+        
+    </div>
+</div>
+
+<style>
+    .dashboard {
+    display: flex;
+    flex-direction: column;
+    }
+
+    .tile-set {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px; /* Adjust spacing between sets as needed */
+    }
+
+    .tile-set > * {
+    margin-right: 10px; /* Reduce spacing between tiles */
+    }
+
+    .tile-set > *:last-child {
+    margin-right: 0; /* Remove right margin for the last tile */
+    }
+</style>
+
+@code{
+    private RollcallMetadata rollcallMetadata { get; set; } = new();
+    private DateTime DateTime = DateTime.Now;
+    private int Unchecked { get; set; }
+    private int Checked { get; set; }
+    private int Total { get; set; }
+    private List<Student> studentData;
+
+
+    private async Task ReloadData()
+    {
+        studentData = await StudentService.GetStudents();
+        rollcallMetadata = await RollCallService.GetRollCallData(DateTime);
+        if (rollcallMetadata == null) 
+        {
+            rollcallMetadata = new RollcallMetadata()
+            {
+                TotalAbsent = 0,
+                TotalPresent = 0,
+                TotalDismissed = 0
+            };
+
+        }
+        Checked = rollcallMetadata.TotalAbsent + rollcallMetadata.TotalPresent;
+        Unchecked = studentData.Count - Checked;
+        Total = studentData.Count;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await ReloadData();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadData();
+    }
+}

@@ -1,0 +1,153 @@
+﻿@page "/rollcall"
+@using Automation_School_UI.Attributes
+@using Automation_School_UI.Components
+@using Automation_School_UI.Components.Modals
+@using Automation_School_UI.Models
+@using Automation_School_UI.Services
+@using BlazorBootstrap
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Authorization
+@using System.IdentityModel.Tokens.Jwt
+@inject NavigationManager Navigation
+@inject IStudentService StudentService
+@inject IRollcallService RollcallService
+@inject Blazored.Toast.Services.IToastService ToastService
+@inject ILocalStorageService LocalStorageService
+
+<h3>Roll Call Dashboard</h3>
+<Toasts class="p-3" Messages="messages" Placement="ToastsPlacement.TopRight" />
+
+<input type="text" @bind="searchTerm" @oninput="HandleSearchInput" placeholder="Search students..." class="form-control mb-3" />
+
+@if (pagedData == null || pagedData.Count < 1)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Firstname</th>
+                <th>Lastname</th>
+                <th>Age</th>
+                <th>Grade</th>
+                <th>Dismissed</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in pagedData)
+            {
+                <tr>
+                    <td>@item.Id</td>
+                    <td>@item.FirstName</td>
+                    <td>@item.LastName</td>
+                    <td>@item.Age</td>
+                    <td>@item.Grade</td>
+                    <td>@IsDismissed(item.Id)</td>
+                    <td>
+                        <BlazorBootstrap.Button Disabled="@IsDismissed(item.Id)" Color="@HandleIsPresent(item.Id,true)" @onclick="() => HandleMarkStudent(item.Id,true)">Present</BlazorBootstrap.Button>
+                        <BlazorBootstrap.Button Disabled="@IsDismissed(item.Id)" Color="@HandleIsPresent(item.Id,false)" @onclick="() => HandleMarkStudent(item.Id,false)">Absent</BlazorBootstrap.Button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+   <BlazorBootstrap.Pagination TotalPages="@pages" DisplayPages="@pageSize" ActivePageNumber="@currentPage" PageChanged="OnPageChangedAsync" />
+}
+
+@code {
+    private List<Student> data;
+    private List<Student> pagedData = new();
+    private RollcallMetadata metadata;
+    private CreateStudentModal createStudentModal;
+    private List<ToastMessage> messages = new List<ToastMessage>();
+    private string searchTerm = string.Empty;
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalItems = 0;
+    private int pages = 1;
+    private async Task ReloadStudents()
+    {
+        data = await StudentService.GetStudents();
+        metadata = await RollcallService.GetRollCallData(DateTime.Now);
+        ApplySearchAndPagination();
+    }
+
+    private bool IsDismissed(string id)
+    {
+        var student = metadata.Rollcalls.FirstOrDefault(x => x.studentId == id);
+        return student?.Dismissed ?? false;
+    }
+
+    private BlazorBootstrap.ButtonColor HandleIsPresent(string id, bool presentBtn)
+    {
+        var rollCallData = metadata.Rollcalls.FirstOrDefault(x => x.studentId == id);
+        if (rollCallData == null) return BlazorBootstrap.ButtonColor.Secondary;
+
+        if (rollCallData.IsPresent && presentBtn)
+        {
+            return BlazorBootstrap.ButtonColor.Primary;
+        }
+        else if (!rollCallData.IsPresent && !presentBtn)
+        {
+            return BlazorBootstrap.ButtonColor.Danger;
+        }
+        return BlazorBootstrap.ButtonColor.Secondary;
+    }
+
+    private async Task HandleMarkStudent(string id, bool present)
+    {
+        ROLLCALLOUTCOME outcome = present ? await RollcallService.MarkPresent(id) : await RollcallService.MarkAbsent(id);
+
+        if (outcome != ROLLCALLOUTCOME.SUCCESS)
+        {
+            ToastMessage toast = new()
+            {
+                Type = ToastType.Danger,
+                Title = "Roll call failure",
+                HelpText = "Unable to mark student present",
+                Message = $"Unable to mark student present - {outcome}"
+            };
+            messages.Add(toast);
+        }
+
+        await ReloadStudents();
+    }
+
+    private void ApplySearchAndPagination()
+    {
+        var filteredData = string.IsNullOrWhiteSpace(searchTerm)
+            ? data
+            : data.Where(s => s.FirstName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                              s.LastName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                              s.Id.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+                              ).ToList();
+
+        totalItems = filteredData.Count;
+        pagedData = filteredData.Skip((currentPage - 1) * pageSize).Take(pageSize).ToList();
+        pages = (int)Math.Ceiling((double)totalItems / pageSize);
+         Console.WriteLine($"Total: {totalItems}");
+          Console.WriteLine($"Page Size: {pageSize}");
+        Console.WriteLine($"Pages: {pages}");
+    }
+
+    private async Task OnPageChangedAsync(int page)
+    {
+        await Task.Run(() => {currentPage = page;});
+        ApplySearchAndPagination();
+    }
+    private void HandleSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value.ToString();
+        currentPage = 1; // Reset to first page on new search
+        ApplySearchAndPagination();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadStudents();
+    }
+}

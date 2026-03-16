@@ -1,0 +1,7 @@
+@Automation_School_API_HostAddress = http://localhost:5216
+
+GET {{Automation_School_API_HostAddress}}/Student/
+Accept: application/json
+
+###
+

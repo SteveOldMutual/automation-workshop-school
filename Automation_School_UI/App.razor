@@ -1,0 +1,46 @@
+﻿@using Automation_School_UI.Providers
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Routing
+@using Automation_School_UI.Components
+@using System.IdentityModel.Tokens.Jwt
+@inject NavigationManager Navigation
+@inject ILocalStorageService LocalStorageService
+
+
+<Router AppAssembly="@typeof(App).Assembly" OnNavigateAsync="HandleNavigation">
+    <Found Context="routeData">
+        <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <p>Sorry, there's nothing at this address.</p>
+        </LayoutView>
+    </NotFound>
+</Router>
+
+
+@code {
+    private async Task HandleNavigation(NavigationContext args)
+    {
+        var path = args.Path;
+        if (path.Equals("login", StringComparison.OrdinalIgnoreCase))
+        {
+            // Do not wrap with CascadingAuthenticationState for the login route
+            return;
+        }
+
+        var token = await LocalStorageService.GetItemAsync<string>("authToken");
+       
+
+        if (string.IsNullOrEmpty(token))
+        {
+            Navigation.NavigateTo("/login");
+        }
+       
+
+       // var result = await AuthProvider.GetAuthenticationStateAsync();
+        // Wrap with CascadingAuthenticationState for other routes
+        await Task.CompletedTask;
+    }
+}

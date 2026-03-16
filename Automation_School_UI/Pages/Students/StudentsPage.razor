@@ -1,0 +1,131 @@
+﻿@page "/students"
+@using Automation_School_UI.Attributes
+@using Automation_School_UI.Components
+@using Automation_School_UI.Components.Modals
+@using Automation_School_UI.Models
+@using Automation_School_UI.Services
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Authorization
+@using System.IdentityModel.Tokens.Jwt
+@inject NavigationManager Navigation
+@inject IStudentService StudentService
+@attribute [RequireAuthentication]
+@inherits AuthenticatedComponentBase
+@attribute [Authorize]
+@inject ILocalStorageService LocalStorageService
+
+<h3>Student Dashboard</h3>
+
+<input type="text" @bind="searchTerm" @oninput="HandleSearchInput" placeholder="Search students..." class="form-control mb-3" />
+
+@if (pagedData == null || pagedData.Count < 1)
+{
+    <p><em>No Students loaded</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Firstname</th>
+                <th>Lastname</th>
+                <th>Age</th>
+                <th>Grade</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in pagedData)
+            {
+                <tr>
+                    <td name="studentID">@item.Id</td>
+                    <td name="studentFirstName">@item.FirstName</td>
+                    <td name="studentLastName">@item.LastName</td>
+                    <td name="studentAge">@item.Age</td>
+                    <td name="studentGrade">@item.Grade</td>
+                    <td name="studentActions">
+                        <BlazorBootstrap.Button Color="BlazorBootstrap.ButtonColor.Secondary" @onclick="async () => await HandleEditStudent(item.Id)">Edit</BlazorBootstrap.Button>
+                        <BlazorBootstrap.Button Color="BlazorBootstrap.ButtonColor.Danger" @onclick="async () => await HandleDeleteStudent(item.Id)">Delete</BlazorBootstrap.Button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <BlazorBootstrap.Pagination TotalPages="@pages" DisplayPages="@pageSize" ActivePageNumber="@currentPage" PageChanged="OnPageChangedAsync" />
+}
+
+<BlazorBootstrap.Button Color="BlazorBootstrap.ButtonColor.Primary" @onclick="async () => await HandleAddStudentClick()">Add Student</BlazorBootstrap.Button>
+<CreateStudentModal @ref="createStudentModal" OnStudentAdded="ReloadStudents"></CreateStudentModal>
+
+@code {
+    private List<Student> data = new();
+    private List<Student> pagedData = new();
+    private CreateStudentModal createStudentModal;
+    private string searchTerm = string.Empty;
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalItems = 0;
+    private int pages = 1;
+
+    private async Task HandleAddStudentClick()
+    {
+        await createStudentModal.Open();
+    }
+
+    private async Task ReloadStudents()
+    {
+        data = await StudentService.GetStudents();
+        totalItems = data.Count;
+        ApplySearchAndPagination();
+    }
+
+    private async Task HandleEditStudent(string id)
+    {
+        await createStudentModal.Open(id);
+    }
+
+    private async Task HandleDeleteStudent(string id)
+    {
+        var success = await StudentService.DeleteStudent(id);
+        if (success)
+        {
+            await ReloadStudents();
+        }
+    }
+
+    private void ApplySearchAndPagination()
+    {
+        var filteredData = string.IsNullOrWhiteSpace(searchTerm)
+            ? data
+            : data.Where(s => s.FirstName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                              s.LastName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                              s.Id.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+                              ).ToList();
+
+        totalItems = filteredData.Count;
+        pagedData = filteredData.Skip((currentPage - 1) * pageSize).Take(pageSize).ToList();
+        pages = (int)Math.Ceiling((double)totalItems / pageSize);
+         Console.WriteLine($"Total: {totalItems}");
+          Console.WriteLine($"Page Size: {pageSize}");
+        Console.WriteLine($"Pages: {pages}");
+    }
+
+    private async Task OnPageChangedAsync(int page)
+    {
+        await Task.Run(() => {currentPage = page;});
+        ApplySearchAndPagination();
+    }
+
+    private void HandleSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value.ToString();
+        currentPage = 1; // Reset to first page on new search
+        ApplySearchAndPagination();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadStudents();
+    }
+}

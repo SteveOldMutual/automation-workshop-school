@@ -1,0 +1,86 @@
+﻿@using Automation_School_UI.Models
+@using Automation_School_UI.Services
+@using BlazorBootstrap
+@using Blazored.LocalStorage
+@using System.IdentityModel.Tokens.Jwt
+@inject IAuthService AuthService
+@inject Blazored.Toast.Services.IToastService ToastService
+
+@* RegisterModal.razor *@
+<div id="registrationModal" class="modal @ModalClass" tabindex="-1" role="dialog" style="display:@ModalDisplay; overflow-y: auto;">
+    <Toasts class="p-3" Messages="messages" Placement="ToastsPlacement.TopRight" />
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">User Registration</h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="Close"></button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="registerDTO" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+                    <div class="mb-3">
+                        <label for="registerUsername" class="form-label">Username</label>
+                        <InputText id="registerUsername" class="form-control" @bind-Value="registerDTO.Username" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="registerEmailAddress" class="form-label">Email Adress</label>
+                        <InputText id="registerEmailAddress" class="form-control" @bind-Value="registerDTO.Email" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="registerPassword" class="form-label">Password</label>
+                        <InputText id="registerPassword" type="password" class="form-control" @bind-Value="registerDTO.Password" />
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </EditForm>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="Close">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegisterDTO registerDTO = new RegisterDTO();
+    [Parameter] public EventCallback<string> OnRegisterCompleted { get; set; }
+    List<ToastMessage> messages = new List<ToastMessage>();
+    private string ModalDisplay { get; set; } = "none";
+    private string ModalClass { get; set; } = "";
+
+    public async Task Open()
+    {
+        Console.WriteLine("Register button clicked");
+        ModalDisplay = "block";
+        ModalClass = "show";
+        StateHasChanged();
+    }
+
+    public void Close()
+    {
+        ModalDisplay = "none";
+        ModalClass = "";
+        StateHasChanged();
+
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+    }
+
+    private async Task HandleValidSubmit()
+    {
+
+        var response = await AuthService.RegisterUser(registerDTO);
+        if (response.IsSuccessStatusCode)
+        {
+            await OnRegisterCompleted.InvokeAsync(null);
+        }
+        else
+        {
+            await OnRegisterCompleted.InvokeAsync(await response.Content.ReadAsStringAsync());           
+        }
+        Close();
+    }
+}
